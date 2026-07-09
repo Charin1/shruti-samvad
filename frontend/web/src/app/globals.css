@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base background: Parchment Cream #fcf9ee */
+    --background: 46 64% 96%;
+    /* Main text: Dark Chocolate #1c1c15 */
+    --foreground: 60 14% 10%;
+
+    /* Sidebar/Card BG: Warm Cream #f7f4e9 */
+    --sidebar-background: 46 52% 94%;
+    --sidebar-foreground: 60 14% 10%;
+
+    --card: 46 52% 94%;
+    --card-foreground: 60 14% 10%;
+
+    --popover: 46 64% 96%;
+    --popover-foreground: 60 14% 10%;
+
+    /* Primary: Burnt Orange #994400 */
+    --primary: 27 100% 30%;
+    --primary-foreground: 46 64% 96%;
+
+    /* Secondary: Terracotta #934b19 */
+    --secondary: 25 71% 34%;
+    --secondary-foreground: 46 64% 96%;
+
+    /* Muted states */
+    --muted: 46 30% 90%;
+    --muted-foreground: 60 10% 40%;
+
+    --accent: 27 100% 30%;
+    --accent-foreground: 46 64% 96%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 46 64% 96%;
+
+    /* Borders: very subtle */
+    --border: 46 30% 85%;
+    --input: 46 30% 85%;
+    --ring: 27 100% 30%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Since the vision rejects cold/clinical, dark mode should be deep warm brown/black */
+    --background: 30 10% 12%;
+    --foreground: 46 64% 96%;
+
+    --sidebar-background: 30 15% 10%;
+    --sidebar-foreground: 46 64% 96%;
+
+    --card: 30 15% 10%;
+    --card-foreground: 46 64% 96%;
+
+    --popover: 30 10% 12%;
+    --popover-foreground: 46 64% 96%;
+
+    --primary: 27 100% 45%;
+    --primary-foreground: 30 10% 12%;
+
+    --secondary: 25 71% 40%;
+    --secondary-foreground: 46 64% 96%;
+
+    --muted: 30 10% 20%;
+    --muted-foreground: 46 30% 70%;
+
+    --accent: 27 100% 45%;
+    --accent-foreground: 30 10% 12%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 46 64% 96%;
+
+    --border: 30 10% 20%;
+    --input: 30 10% 20%;
+    --ring: 27 100% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    height: 100%;
+    overflow: hidden;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    height: 100%;
+    overflow: hidden;
+  }
+}

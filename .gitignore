@@ -1,0 +1,102 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv
+venv/
+ENV/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+.turbo/
+build/
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# IDEs
+.vscode/
+.vscode/extensions/
+.idea/
+.idea/shelf/
+*.swp
+*.swo
+*~
+
+# Data/Storage
+storage/
+postgres_data/
+redis_data/
+planning/
+
+# TTS Model Files (Kokoro ONNX + voices)
+model.onnx
+voices.bin
+voices.json
+
+# Logs
+logs/
+
+# Testing
+.pytest_cache/
+coverage/
+.coverage
+htmlcov/
+
+# Agent
+.agent/
+
+# Type checking & linting
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.eslintcache
+.stylelintcache
+
+# macOS & Windows
+.DS_Store
+Thumbs.db
+
+# Frontend cache & build
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Audio artifacts (WAV/MP3 temp files)
+*.wav.tmp
+*.mp3.tmp
+
+# LangGraph checkpointer (SQLite) — local run state, not source
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
