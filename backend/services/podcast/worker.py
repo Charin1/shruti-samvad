@@ -192,6 +192,7 @@ async def process_episode_job(ctx, episode_id: UUID):
                 "episode_id": str(episode.id),
                 "target_minutes": episode.target_minutes,
                 "review_requested": episode.review_requested,
+                "voice": episode.voice,
                 "articles": articles_input,
                 "article_summaries": [],
                 "summary": "",

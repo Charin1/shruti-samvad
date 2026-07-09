@@ -1,0 +1,15 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Mark Background -->
+  <rect width="120" height="120" rx="20" fill="url(#gradient)"/>
+
+  <!-- Danda Symbol (॥) -->
+  <text x="60" y="80" font-size="80" font-weight="700" text-anchor="middle" fill="#fcf9ee" font-family="Georgia, serif">॥</text>
+
+  <!-- Gradient Definition -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#994400;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#b85a2a;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>

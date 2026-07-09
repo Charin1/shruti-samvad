@@ -12,6 +12,7 @@ import {
   type Feed,
 } from "@/lib/api";
 import { useReaderStore } from "@/lib/store";
+import { LogoMark } from "@/components/Logo";
 
 export function Sidebar() {
   const qc = useQueryClient();
@@ -95,13 +96,18 @@ export function Sidebar() {
 
   return (
     <aside className="w-72 shrink-0 bg-sidebar border-r border-border/60 flex flex-col h-full">
-      <div className="px-5 py-5">
-        <h1 className="font-newsreader text-2xl text-primary font-semibold">
-          Shruti Samvad
-        </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Your intelligence inbox
-        </p>
+      <div className="px-5 py-4">
+        <div className="flex items-center gap-3">
+          <LogoMark />
+          <div>
+            <h1 className="font-newsreader text-lg text-foreground font-semibold">
+              श्रुति संवाद
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Intelligence Inbox
+            </p>
+          </div>
+        </div>
       </div>
 
       <nav className="px-3 flex-1 overflow-y-auto">

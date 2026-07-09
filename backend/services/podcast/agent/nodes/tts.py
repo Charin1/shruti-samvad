@@ -15,8 +15,9 @@ async def tts_node(state: EpisodeState) -> dict:
         await publish_status(episode_id, "synthesizing", progress=int(done / total * 100))
 
     try:
+        voice = state.get("voice", "af_heart")
         success = await tts_service.synthesize(
-            state["podcast_script"], temp_wav_path, on_progress=on_progress
+            state["podcast_script"], temp_wav_path, voice=voice, on_progress=on_progress
         )
         if success:
             return {"audio_path": temp_wav_path, "status": "saving"}

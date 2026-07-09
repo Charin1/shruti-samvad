@@ -70,6 +70,16 @@ async def startup_event():
 async def root():
     return {"message": "Shruti Samvad Podcast API is running"}
 
+@app.get("/voices")
+async def get_voices():
+    """List available TTS voices from Kokoro model."""
+    from services.podcast.services.tts import tts_service
+    try:
+        voices = tts_service.get_voices()
+        return {"voices": voices}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"TTS not ready: {str(e)}")
+
 @app.websocket("/ws/{episode_id}")
 async def job_status_ws(websocket: WebSocket, episode_id: str):
     await websocket.accept()
@@ -137,6 +147,7 @@ class CreateEpisodeRequest(BaseModel):
     title: Optional[str] = None
     target_minutes: float = 3.0
     review_requested: bool = False
+    voice: str = "af_heart"  # TTS voice selection
 
 
 class ReviewScriptRequest(BaseModel):
@@ -220,6 +231,7 @@ async def create_episode(payload: CreateEpisodeRequest, session=Depends(get_sess
         title=payload.title,
         target_minutes=payload.target_minutes,
         review_requested=payload.review_requested,
+        voice=payload.voice,
         status=JobStatus.pending,
     )
     session.add(episode)

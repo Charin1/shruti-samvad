@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ListChecks, X } from "lucide-react";
+import { ListChecks, X, Search } from "lucide-react";
 import { listArticles, type Article } from "@/lib/api";
 import { useReaderStore } from "@/lib/store";
 import { CreateEpisodeBar } from "@/components/CreateEpisodeBar";
@@ -23,6 +24,7 @@ function hostOf(url: string): string {
 }
 
 export function ArticleList() {
+  const [search, setSearch] = useState("");
   const {
     selectedFeedId,
     selectedArticleId,
@@ -37,6 +39,16 @@ export function ArticleList() {
     queryKey: ["articles", selectedFeedId],
     queryFn: () => listArticles(selectedFeedId ?? undefined),
   });
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return articles;
+    const q = search.toLowerCase();
+    return articles.filter(
+      (a) =>
+        a.title.toLowerCase().includes(q) ||
+        hostOf(a.url).toLowerCase().includes(q)
+    );
+  }, [articles, search]);
 
   return (
     <div className="w-[380px] shrink-0 border-r border-border/60 flex flex-col h-full bg-background/40">
@@ -57,6 +69,19 @@ export function ArticleList() {
         </button>
       </div>
 
+      <div className="px-3 py-2 border-b border-border/40">
+        <div className="relative">
+          <Search size={13} className="absolute left-2 top-2.5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search articles..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full text-sm pl-7 pr-3 py-2 rounded-md bg-background border border-border focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+      </div>
+
       <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading && (
           <p className="px-5 py-4 text-sm text-muted-foreground">Loading…</p>
@@ -67,9 +92,14 @@ export function ArticleList() {
             fetch — articles appear here once the worker has pulled them.
           </div>
         )}
+        {!isLoading && search && filtered.length === 0 && (
+          <div className="px-5 py-8 text-sm text-muted-foreground">
+            No articles match "{search}"
+          </div>
+        )}
 
         <ul>
-          {articles.map((a: Article) => {
+          {filtered.map((a: Article) => {
             const checked = selectedArticleIds.has(a.id);
             return (
               <li key={a.id}>

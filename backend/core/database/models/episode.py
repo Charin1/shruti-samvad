@@ -27,6 +27,7 @@ class Episode(SQLModel, table=True):
     podcast_script: Optional[str] = None
     audio_file_path: Optional[str] = None
     error_message: Optional[str] = None
+    voice: str = Field(default="af_heart")  # TTS voice selection
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

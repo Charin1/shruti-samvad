@@ -62,6 +62,11 @@ class TTSService:
         if self._kokoro is None:
             self._kokoro = Kokoro(self.model_path, self.voices_path)
 
+    def get_voices(self) -> list[str]:
+        """Return list of available voices."""
+        self.ensure_ready()
+        return sorted(list(self._kokoro.get_voices()))
+
     def _synthesize_chunk_sync(self, chunk: str, voice: str, speed: float):
         return self._kokoro.create(chunk, voice=voice, speed=speed, lang="en-us")
 

@@ -22,6 +22,7 @@ class EpisodeState(TypedDict):
     episode_id: str
     target_minutes: float
     review_requested: bool
+    voice: str  # TTS voice selection (e.g., "af_heart", "af_sky")
     articles: list[ArticleInput]  # loaded once by the worker before invoke
     # Reducer concatenates each summarize_one fan-out branch's result — branches
     # may complete out of order, so each entry carries its own `position`.
