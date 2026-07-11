@@ -24,6 +24,7 @@ export function CustomPodcastGenerator() {
   const [voice, setVoice] = useState("af_heart");
   const [podcastStyle, setPodcastStyle] = useState("conversational");
   const [customPrompt, setCustomPrompt] = useState("");
+  const [bgMusic, setBgMusic] = useState(false);
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [audioPreview, setAudioPreview] = useState<HTMLAudioElement | null>(null);
 
@@ -130,6 +131,7 @@ export function CustomPodcastGenerator() {
         voice,
         podcast_style: podcastStyle,
         custom_prompt: customPrompt.trim() || undefined,
+        bg_music: bgMusic,
       });
     },
     onSuccess: () => {
@@ -307,7 +309,7 @@ export function CustomPodcastGenerator() {
               />
             </label>
 
-            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none py-1">
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none py-0.5">
               <input
                 type="checkbox"
                 checked={reviewRequested}
@@ -315,6 +317,15 @@ export function CustomPodcastGenerator() {
                 className="accent-primary"
               />
               <span>Awaiting Review before synthesis</span>
+            </label>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none py-0.5">
+              <input
+                type="checkbox"
+                checked={bgMusic}
+                onChange={(e) => setBgMusic(e.target.checked)}
+                className="accent-primary"
+              />
+              <span>Mix background music bed</span>
             </label>
           </div>
 

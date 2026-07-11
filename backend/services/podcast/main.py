@@ -162,6 +162,7 @@ class EpisodeOut(BaseModel):
     voice: str
     podcast_style: str
     custom_prompt: Optional[str]
+    bg_music: bool
     created_at: datetime
 
     class Config:
@@ -196,6 +197,7 @@ class CreateEpisodeRequest(BaseModel):
     voice: str = "af_heart"  # TTS voice selection
     podcast_style: str = "conversational"
     custom_prompt: Optional[str] = None
+    bg_music: bool = False
 
 
 class ReviewScriptRequest(BaseModel):
@@ -230,6 +232,7 @@ async def _episode_to_out(session, episode: Episode) -> EpisodeOut:
         voice=episode.voice,
         podcast_style=episode.podcast_style,
         custom_prompt=episode.custom_prompt,
+        bg_music=episode.bg_music,
         created_at=episode.created_at,
     )
 
@@ -326,6 +329,7 @@ async def create_episode(payload: CreateEpisodeRequest, session=Depends(get_sess
         voice=payload.voice,
         podcast_style=payload.podcast_style,
         custom_prompt=payload.custom_prompt,
+        bg_music=payload.bg_music,
         status=JobStatus.pending,
     )
     session.add(episode)

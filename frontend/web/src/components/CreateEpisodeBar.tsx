@@ -19,6 +19,7 @@ export function CreateEpisodeBar() {
   const [voice, setVoice] = useState("af_heart");
   const [podcastStyle, setPodcastStyle] = useState("conversational");
   const [customPrompt, setCustomPrompt] = useState("");
+  const [bgMusic, setBgMusic] = useState(false);
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [audioPreview, setAudioPreview] = useState<HTMLAudioElement | null>(null);
 
@@ -106,6 +107,7 @@ export function CreateEpisodeBar() {
         voice,
         podcast_style: podcastStyle,
         custom_prompt: customPrompt.trim() || undefined,
+        bg_music: bgMusic,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["episodes"] });
@@ -172,7 +174,7 @@ export function CreateEpisodeBar() {
             </div>
           </label>
 
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground col-span-2">
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground col-span-3">
             <span>Voice</span>
             <div className="flex gap-1.5 items-center h-8">
               <select
@@ -200,18 +202,6 @@ export function CreateEpisodeBar() {
               </button>
             </div>
           </label>
-
-          <div className="flex items-center justify-end h-8 col-span-1 pb-1">
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={reviewRequested}
-                onChange={(e) => setReviewRequested(e.target.checked)}
-                className="accent-primary"
-              />
-              <span>Review</span>
-            </label>
-          </div>
         </div>
 
         <div className="flex flex-col gap-2.5">
@@ -239,6 +229,27 @@ export function CreateEpisodeBar() {
               rows={2}
               className="w-full rounded-md border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring resize-none font-sans"
             />
+          </label>
+        </div>
+
+        <div className="flex items-center gap-4 py-0.5 select-none">
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              checked={reviewRequested}
+              onChange={(e) => setReviewRequested(e.target.checked)}
+              className="accent-primary"
+            />
+            <span>Awaiting Review</span>
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              checked={bgMusic}
+              onChange={(e) => setBgMusic(e.target.checked)}
+              className="accent-primary"
+            />
+            <span>Background Music</span>
           </label>
         </div>
 

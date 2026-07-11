@@ -195,6 +195,7 @@ async def process_episode_job(ctx, episode_id: UUID):
                 "voice": episode.voice,
                 "podcast_style": episode.podcast_style,
                 "custom_prompt": episode.custom_prompt,
+                "bg_music": episode.bg_music,
                 "articles": articles_input,
                 "article_summaries": [],
                 "summary": "",

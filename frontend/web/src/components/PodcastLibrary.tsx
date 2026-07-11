@@ -124,6 +124,7 @@ function EpisodeCard({ episode }: { episode: Episode }) {
         voice: detail.voice,
         podcast_style: detail.podcast_style,
         custom_prompt: detail.custom_prompt ?? undefined,
+        bg_music: detail.bg_music,
       });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["episodes"] }),

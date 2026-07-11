@@ -30,6 +30,7 @@ class Episode(SQLModel, table=True):
     voice: str = Field(default="af_heart")  # TTS voice selection
     podcast_style: str = Field(default="conversational")  # generation style/tone
     custom_prompt: Optional[str] = Field(default=None)  # custom prompt/instructions
+    bg_music: bool = Field(default=False)  # play background music
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
