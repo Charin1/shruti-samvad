@@ -23,6 +23,8 @@ class EpisodeState(TypedDict):
     target_minutes: float
     review_requested: bool
     voice: str  # TTS voice selection (e.g., "af_heart", "af_sky")
+    podcast_style: str  # style/tone for podcast script
+    custom_prompt: Optional[str]  # user custom prompt/instructions
     articles: list[ArticleInput]  # loaded once by the worker before invoke
     # Reducer concatenates each summarize_one fan-out branch's result — branches
     # may complete out of order, so each entry carries its own `position`.

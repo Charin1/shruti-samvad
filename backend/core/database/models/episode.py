@@ -28,6 +28,8 @@ class Episode(SQLModel, table=True):
     audio_file_path: Optional[str] = None
     error_message: Optional[str] = None
     voice: str = Field(default="af_heart")  # TTS voice selection
+    podcast_style: str = Field(default="conversational")  # generation style/tone
+    custom_prompt: Optional[str] = Field(default=None)  # custom prompt/instructions
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

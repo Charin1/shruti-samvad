@@ -80,6 +80,43 @@ async def get_voices():
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"TTS not ready: {str(e)}")
 
+@app.get("/voices/{voice_name}/preview")
+async def get_voice_preview(voice_name: str):
+    """Generate or retrieve a short voice preview audio clip."""
+    from services.podcast.services.tts import tts_service
+    from pydub import AudioSegment
+    from fastapi.responses import FileResponse
+    import os
+
+    try:
+        available_voices = tts_service.get_voices()
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"TTS not ready: {str(e)}")
+
+    if voice_name not in available_voices:
+        raise HTTPException(status_code=404, detail=f"Voice {voice_name} not found")
+
+    preview_dir = os.path.join(AUDIO_STORAGE_PATH, "previews")
+    os.makedirs(preview_dir, exist_ok=True)
+    final_mp3_path = os.path.join(preview_dir, f"{voice_name}.mp3")
+
+    if not os.path.exists(final_mp3_path):
+        spoken_voice_name = voice_name.replace("_", " ")
+        text = f"Hello! This is a preview of the {spoken_voice_name} voice in Shruti Samvad. I hope I sound suitable for your podcast."
+        temp_wav_path = os.path.join(preview_dir, f"{voice_name}.wav")
+        try:
+            await tts_service.synthesize(text, temp_wav_path, voice=voice_name)
+            audio = AudioSegment.from_wav(temp_wav_path)
+            audio.export(final_mp3_path, format="mp3", bitrate="128k")
+            if os.path.exists(temp_wav_path):
+                os.remove(temp_wav_path)
+        except Exception as e:
+            if os.path.exists(temp_wav_path):
+                os.remove(temp_wav_path)
+            raise HTTPException(status_code=500, detail=f"Failed to generate preview: {str(e)}")
+
+    return FileResponse(final_mp3_path, media_type="audio/mpeg")
+
 @app.websocket("/ws/{episode_id}")
 async def job_status_ws(websocket: WebSocket, episode_id: str):
     await websocket.accept()
@@ -122,6 +159,9 @@ class EpisodeOut(BaseModel):
     article_titles: List[str]
     audio_file_path: Optional[str]
     error_message: Optional[str]
+    voice: str
+    podcast_style: str
+    custom_prompt: Optional[str]
     created_at: datetime
 
     class Config:
@@ -148,6 +188,8 @@ class CreateEpisodeRequest(BaseModel):
     target_minutes: float = 3.0
     review_requested: bool = False
     voice: str = "af_heart"  # TTS voice selection
+    podcast_style: str = "conversational"
+    custom_prompt: Optional[str] = None
 
 
 class ReviewScriptRequest(BaseModel):
@@ -179,6 +221,9 @@ async def _episode_to_out(session, episode: Episode) -> EpisodeOut:
         article_titles=[article.title for _, article in pairs],
         audio_file_path=episode.audio_file_path,
         error_message=episode.error_message,
+        voice=episode.voice,
+        podcast_style=episode.podcast_style,
+        custom_prompt=episode.custom_prompt,
         created_at=episode.created_at,
     )
 
@@ -232,6 +277,8 @@ async def create_episode(payload: CreateEpisodeRequest, session=Depends(get_sess
         target_minutes=payload.target_minutes,
         review_requested=payload.review_requested,
         voice=payload.voice,
+        podcast_style=payload.podcast_style,
+        custom_prompt=payload.custom_prompt,
         status=JobStatus.pending,
     )
     session.add(episode)

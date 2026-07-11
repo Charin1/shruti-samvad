@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Mic, X, Sparkles } from "lucide-react";
+import { Mic, X, Sparkles, Volume2, VolumeX } from "lucide-react";
 import { createEpisode, listArticles } from "@/lib/api";
 import { useReaderStore } from "@/lib/store";
 import { estimateTargetMinutes, countWords } from "@/lib/estimator";
@@ -17,6 +17,11 @@ export function CreateEpisodeBar() {
   const [reviewRequested, setReviewRequested] = useState(false);
   const [isAutoDetected, setIsAutoDetected] = useState(true);
   const [voice, setVoice] = useState("af_heart");
+  const [podcastStyle, setPodcastStyle] = useState("conversational");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [audioPreview, setAudioPreview] = useState<HTMLAudioElement | null>(null);
+
   const qc = useQueryClient();
 
   const { data: allArticles = [] } = useQuery({
@@ -48,6 +53,49 @@ export function CreateEpisodeBar() {
     setTargetMinutes(estimated);
   }, [selectedArticleIds, allArticles, isAutoDetected]);
 
+  // Voice preview cleanup on unmount or voice change
+  useEffect(() => {
+    return () => {
+      if (audioPreview) {
+        audioPreview.pause();
+      }
+    };
+  }, [audioPreview]);
+
+  useEffect(() => {
+    if (audioPreview) {
+      audioPreview.pause();
+      setIsPlayingPreview(false);
+      setAudioPreview(null);
+    }
+  }, [voice]);
+
+  const togglePlayPreview = () => {
+    if (isPlayingPreview) {
+      if (audioPreview) {
+        audioPreview.pause();
+        audioPreview.currentTime = 0;
+      }
+      setIsPlayingPreview(false);
+    } else {
+      const url = `http://localhost:8001/voices/${voice}/preview`;
+      const audio = new Audio(url);
+      audio.onended = () => {
+        setIsPlayingPreview(false);
+      };
+      audio.onerror = () => {
+        setIsPlayingPreview(false);
+        alert("Failed to play voice preview. Make sure the podcast API is running.");
+      };
+      setAudioPreview(audio);
+      setIsPlayingPreview(true);
+      audio.play().catch((err) => {
+        console.error(err);
+        setIsPlayingPreview(false);
+      });
+    }
+  };
+
   const create = useMutation({
     mutationFn: () =>
       createEpisode({
@@ -56,6 +104,8 @@ export function CreateEpisodeBar() {
         target_minutes: targetMinutes,
         review_requested: reviewRequested,
         voice,
+        podcast_style: podcastStyle,
+        custom_prompt: customPrompt.trim() || undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["episodes"] });
@@ -92,10 +142,10 @@ export function CreateEpisodeBar() {
           className="w-full rounded-md border border-border/60 bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
 
-        <div className="grid grid-cols-4 gap-2 items-end">
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+        <div className="grid grid-cols-5 gap-3 items-end">
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground col-span-2">
             <span>Duration</span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5 h-8">
               <input
                 type="number"
                 min={1}
@@ -108,43 +158,87 @@ export function CreateEpisodeBar() {
                 className="w-12 rounded-md border border-border/60 bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               />
               <span className="text-xs">min</span>
+              {!isAutoDetected && (
+                <button
+                  type="button"
+                  onClick={() => setIsAutoDetected(true)}
+                  className="inline-flex items-center gap-1 text-[10px] px-1.5 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20 shrink-0"
+                  title="Auto-detect duration based on article content"
+                >
+                  <Sparkles size={9} />
+                  Auto
+                </button>
+              )}
             </div>
           </label>
 
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground col-span-2">
             <span>Voice</span>
+            <div className="flex gap-1.5 items-center h-8">
+              <select
+                value={voice}
+                onChange={(e) => setVoice(e.target.value)}
+                className="flex-1 min-w-0 rounded-md border border-border/60 bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                {voices.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={togglePlayPreview}
+                title={isPlayingPreview ? "Stop preview" : "Play voice preview"}
+                className={`p-1.5 rounded-md border transition-colors shrink-0 ${
+                  isPlayingPreview
+                    ? "border-primary bg-primary/5 text-primary hover:bg-primary/10"
+                    : "border-border/60 bg-background hover:bg-background/80 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {isPlayingPreview ? <VolumeX size={14} /> : <Volume2 size={14} />}
+              </button>
+            </div>
+          </label>
+
+          <div className="flex items-center justify-end h-8 col-span-1 pb-1">
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={reviewRequested}
+                onChange={(e) => setReviewRequested(e.target.checked)}
+                className="accent-primary"
+              />
+              <span>Review</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+            <span>Style & Tone</span>
             <select
-              value={voice}
-              onChange={(e) => setVoice(e.target.value)}
-              className="rounded-md border border-border/60 bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              value={podcastStyle}
+              onChange={(e) => setPodcastStyle(e.target.value)}
+              className="w-full rounded-md border border-border/60 bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             >
-              {voices.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
+              <option value="conversational">Conversational (Warm & Storytelling)</option>
+              <option value="briefing">News Briefing (Concise & Professional)</option>
+              <option value="analytical">Analytical (Deep-Dive & Explanatory)</option>
+              <option value="dramatic">Dramatic (Suspenseful & High-Energy)</option>
+              <option value="humorous">Humorous (Witty & Lighthearted)</option>
             </select>
           </label>
 
-          {!isAutoDetected && (
-            <button
-              onClick={() => setIsAutoDetected(true)}
-              className="inline-flex items-center justify-center gap-1 text-xs px-2 py-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors bg-primary/5"
-              title="Auto-detect duration based on article content"
-            >
-              <Sparkles size={11} />
-              Auto
-            </button>
-          )}
-
-          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer justify-end">
-            <input
-              type="checkbox"
-              checked={reviewRequested}
-              onChange={(e) => setReviewRequested(e.target.checked)}
-              className="accent-primary"
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+            <span>Custom Instructions / Prompt (Optional)</span>
+            <textarea
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              placeholder="e.g. Focus on technology impacts, skip financial tables, explain terms simply..."
+              rows={2}
+              className="w-full rounded-md border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring resize-none font-sans"
             />
-            <span>Review</span>
           </label>
         </div>
 

@@ -10,7 +10,10 @@ async def scripter_node(state: EpisodeState) -> dict:
     print(f"Generating script for episode {state['episode_id']}...")
     try:
         raw_script = await generate_podcast_script(
-            state["summary"], target_minutes=state.get("target_minutes", 3.0)
+            state["summary"],
+            target_minutes=state.get("target_minutes", 3.0),
+            podcast_style=state.get("podcast_style", "conversational"),
+            custom_prompt=state.get("custom_prompt", None)
         )
         script = sanitize_script(raw_script)
         validation_error = validate_script(script)
