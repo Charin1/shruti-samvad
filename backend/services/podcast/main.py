@@ -182,8 +182,14 @@ class EpisodeDetailOut(EpisodeOut):
     articles: List[EpisodeArticleOut]
 
 
+class CustomArticleRequest(BaseModel):
+    title: str
+    content: str
+
+
 class CreateEpisodeRequest(BaseModel):
-    article_ids: List[UUID]
+    article_ids: List[UUID] = []
+    custom_articles: Optional[List[CustomArticleRequest]] = None
     title: Optional[str] = None
     target_minutes: float = 3.0
     review_requested: bool = False
@@ -263,14 +269,55 @@ async def get_episode(episode_id: UUID, session=Depends(get_session)):
 
 @app.post("/episodes", status_code=201)
 async def create_episode(payload: CreateEpisodeRequest, session=Depends(get_session)):
-    """Create an episode from 1..N articles and enqueue generation.
+    """Create an episode from 1..N articles and enqueue generation."""
+    if not payload.article_ids and not payload.custom_articles:
+        raise HTTPException(status_code=400, detail="At least one article_id or custom_article is required")
 
-    Every call creates a new episode row (no in-place regeneration) — clicking
-    "Generate" again produces a new library entry rather than overwriting one,
-    which keeps prior attempts visible.
-    """
-    if not payload.article_ids:
-        raise HTTPException(status_code=400, detail="At least one article_id is required")
+    article_ids = list(payload.article_ids)
+
+    # Save custom pasted articles to the database under a system feed
+    if payload.custom_articles:
+        import uuid
+        import hashlib
+        from core.database.models import Feed, Article
+
+        # Get or create pasted feed
+        result = await session.execute(select(Feed).where(Feed.url == "system://custom-pasted-content"))
+        feed = result.scalars().first()
+        if not feed:
+            feed = Feed(
+                id=uuid.uuid4(),
+                url="system://custom-pasted-content",
+                title="Pasted Blog Content",
+                favicon_url=None,
+                language="en",
+                update_frequency_minutes=999999,
+                last_fetched_at=datetime.utcnow()
+            )
+            session.add(feed)
+            await session.commit()
+            await session.refresh(feed)
+
+        # Create and save Article rows
+        for custom_art in payload.custom_articles:
+            art_id = uuid.uuid4()
+            content_hash = hashlib.sha256(custom_art.content.encode('utf-8')).hexdigest()
+
+            article = Article(
+                id=art_id,
+                feed_id=feed.id,
+                title=custom_art.title.strip() or "Pasted Article",
+                url=f"system://custom-pasted-content/{art_id}",
+                raw_html=None,
+                clean_text=custom_art.content,
+                published_at=datetime.utcnow(),
+                content_hash=content_hash,
+                is_duplicate=False
+            )
+            session.add(article)
+            article_ids.append(art_id)
+
+        await session.commit()
 
     episode = Episode(
         title=payload.title,
@@ -285,7 +332,7 @@ async def create_episode(payload: CreateEpisodeRequest, session=Depends(get_sess
     await session.commit()
     await session.refresh(episode)
 
-    for position, article_id in enumerate(payload.article_ids):
+    for position, article_id in enumerate(article_ids):
         session.add(EpisodeArticle(episode_id=episode.id, article_id=article_id, position=position))
     await session.commit()
 

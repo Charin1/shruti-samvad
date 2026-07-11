@@ -131,6 +131,16 @@ export function Sidebar() {
         >
           <Library size={16} /> Podcast Library
         </button>
+        <button
+          onClick={() => setView("custom")}
+          className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+            view === "custom"
+              ? "bg-primary/10 text-primary font-medium"
+              : "hover:bg-muted text-foreground"
+          }`}
+        >
+          <Pencil size={16} /> Custom Creator
+        </button>
 
         <div className="flex items-center justify-between px-3 mt-5 mb-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

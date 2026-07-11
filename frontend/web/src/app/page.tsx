@@ -3,6 +3,7 @@
 import { ArticleList } from "@/components/ArticleList";
 import { ArticleReader } from "@/components/ArticleReader";
 import { PodcastLibrary } from "@/components/PodcastLibrary";
+import { CustomPodcastGenerator } from "@/components/CustomPodcastGenerator";
 import { useReaderStore } from "@/lib/store";
 
 export default function Home() {
@@ -10,6 +11,10 @@ export default function Home() {
 
   if (view === "library") {
     return <PodcastLibrary />;
+  }
+
+  if (view === "custom") {
+    return <CustomPodcastGenerator />;
   }
 
   return (
