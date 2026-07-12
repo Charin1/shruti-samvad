@@ -360,3 +360,51 @@ async def submit_script_review(episode_id: UUID, payload: ReviewScriptRequest, s
     pool = await get_arq_pool()
     await pool.enqueue_job("resume_episode_job", episode.id, payload.script, _queue_name="arq:podcast")
     return {"episode_id": str(episode.id), "status": "queued"}
+
+
+class TTSPreviewRequest(BaseModel):
+    text: str
+    voice: str = "af_heart"
+
+
+@app.post("/tts/preview")
+async def get_custom_tts_preview(payload: TTSPreviewRequest):
+    """Generate or retrieve a short custom TTS preview audio clip."""
+    from services.podcast.services.tts import tts_service
+    from pydub import AudioSegment
+    from fastapi.responses import FileResponse
+    import hashlib
+    import os
+
+    try:
+        available_voices = tts_service.get_voices()
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"TTS not ready: {str(e)}")
+
+    if payload.voice not in available_voices:
+        raise HTTPException(status_code=404, detail=f"Voice {payload.voice} not found")
+
+    if not payload.text.strip():
+        raise HTTPException(status_code=400, detail="Text snippet cannot be empty")
+
+    preview_dir = os.path.join(AUDIO_STORAGE_PATH, "previews")
+    os.makedirs(preview_dir, exist_ok=True)
+    
+    # Calculate SHA256 of voice + text to cache generated snippet audio
+    cache_key = hashlib.sha256(f"{payload.voice}:{payload.text.strip()}".encode("utf-8")).hexdigest()
+    final_mp3_path = os.path.join(preview_dir, f"custom_{cache_key}.mp3")
+
+    if not os.path.exists(final_mp3_path):
+        temp_wav_path = os.path.join(preview_dir, f"custom_{cache_key}.wav")
+        try:
+            await tts_service.synthesize(payload.text.strip(), temp_wav_path, voice=payload.voice)
+            audio = AudioSegment.from_wav(temp_wav_path)
+            audio.export(final_mp3_path, format="mp3", bitrate="128k")
+            if os.path.exists(temp_wav_path):
+                os.remove(temp_wav_path)
+        except Exception as e:
+            if os.path.exists(temp_wav_path):
+                os.remove(temp_wav_path)
+            raise HTTPException(status_code=500, detail=f"Failed to generate custom preview: {str(e)}")
+
+    return FileResponse(final_mp3_path, media_type="audio/mpeg")
