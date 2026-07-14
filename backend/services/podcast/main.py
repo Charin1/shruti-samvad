@@ -160,6 +160,8 @@ class EpisodeOut(BaseModel):
     audio_file_path: Optional[str]
     error_message: Optional[str]
     voice: str
+    voice_cohost: str
+    podcast_format: str
     podcast_style: str
     custom_prompt: Optional[str]
     bg_music: bool
@@ -195,6 +197,8 @@ class CreateEpisodeRequest(BaseModel):
     target_minutes: float = 3.0
     review_requested: bool = False
     voice: str = "af_heart"  # TTS voice selection
+    voice_cohost: str = "af_sky"  # Co-host TTS voice selection
+    podcast_format: str = "monologue"  # monologue or dialogue
     podcast_style: str = "conversational"
     custom_prompt: Optional[str] = None
     bg_music: bool = False
@@ -230,6 +234,8 @@ async def _episode_to_out(session, episode: Episode) -> EpisodeOut:
         audio_file_path=episode.audio_file_path,
         error_message=episode.error_message,
         voice=episode.voice,
+        voice_cohost=episode.voice_cohost,
+        podcast_format=episode.podcast_format,
         podcast_style=episode.podcast_style,
         custom_prompt=episode.custom_prompt,
         bg_music=episode.bg_music,
@@ -327,6 +333,8 @@ async def create_episode(payload: CreateEpisodeRequest, session=Depends(get_sess
         target_minutes=payload.target_minutes,
         review_requested=payload.review_requested,
         voice=payload.voice,
+        voice_cohost=payload.voice_cohost,
+        podcast_format=payload.podcast_format,
         podcast_style=payload.podcast_style,
         custom_prompt=payload.custom_prompt,
         bg_music=payload.bg_music,

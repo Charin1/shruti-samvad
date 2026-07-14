@@ -98,7 +98,8 @@ async def generate_podcast_script(
     summary: str,
     target_minutes: float = 3.0,
     podcast_style: str = "conversational",
-    custom_prompt: Optional[str] = None
+    custom_prompt: Optional[str] = None,
+    podcast_format: str = "monologue"
 ) -> str:
     """Generate a podcast script targeting a given spoken duration with custom style and self-correcting loop engineering."""
     from typing import Optional
@@ -114,22 +115,36 @@ async def generate_podcast_script(
 
     selected_style_instruction = style_prompts.get(podcast_style, style_prompts["conversational"])
 
-    prompt = (
-        "Convert the following summary into a spoken podcast narration script.\n"
-        f"Tone and Style instruction: {selected_style_instruction}\n"
-    )
+    if podcast_format == "dialogue":
+        prompt = (
+            "Convert the following summary into a spoken co-hosted podcast script between two hosts: Host and Co-Host.\n"
+            "The script must be a natural, engaging conversation between them, with banter, follow-up questions, explanations, and smooth transitions.\n"
+            f"Tone and Style instruction: {selected_style_instruction}\n"
+        )
+        if custom_prompt and custom_prompt.strip():
+            prompt += f"Additional Custom Instructions: {custom_prompt.strip()}\n"
+        prompt += (
+            f"Target length: approximately {target_words} words total across both hosts (will be read aloud at normal speaking pace).\n"
+            "Constraint: Format the script strictly with speaker tags starting each paragraph/turn on a new line: 'Host: ...' and 'Co-Host: ...'.\n"
+            "Do not use other names (like 'Aarav:' or 'Ananya:'). Only use 'Host:' and 'Co-Host:'.\n"
+            "Constraint: Output ONLY the spoken dialogue. Do not include markdown formatting, headings, stage directions (like [laughs], [sighs], or (Host)), or any introduction/outro preamble.\n\n"
+            f"Summary: {summary}"
+        )
+    else:
+        prompt = (
+            "Convert the following summary into a spoken podcast narration script.\n"
+            f"Tone and Style instruction: {selected_style_instruction}\n"
+        )
+        if custom_prompt and custom_prompt.strip():
+            prompt += f"Additional Custom Instructions: {custom_prompt.strip()}\n"
+        prompt += (
+            f"Target length: approximately {target_words} words (will be read aloud at normal speaking pace, so word count matters).\n"
+            "Constraint: Output ONLY the spoken narration text: no markdown formatting, no speaker labels, "
+            "no headings, no stage directions, and no preamble like 'Here is your script'.\n\n"
+            f"Summary: {summary}"
+        )
 
-    if custom_prompt and custom_prompt.strip():
-        prompt += f"Additional Custom Instructions: {custom_prompt.strip()}\n"
-
-    prompt += (
-        f"Target length: approximately {target_words} words (will be read aloud at normal speaking pace, so word count matters).\n"
-        "Constraint: Output ONLY the spoken narration text: no markdown formatting, no speaker labels, "
-        "no headings, no stage directions, and no preamble like 'Here is your script'.\n\n"
-        f"Summary: {summary}"
-    )
-
-    print(f"[Loop Eng] Generating initial script (target: {target_words} words, style: {podcast_style})...")
+    print(f"[Loop Eng] Generating initial script (target: {target_words} words, format: {podcast_format}, style: {podcast_style})...")
     response = await scripter_llm.ainvoke(prompt)
     script = response.content
 
@@ -149,15 +164,35 @@ async def generate_podcast_script(
         if word_count < min_w or word_count > max_w:
             reasons.append(f"Word count is {word_count}, but the target is {target_words} words (acceptable range: {min_w} to {max_w} words).")
             
-        # 2. Format constraint check: look for speaker labels or markdown formatting
+        # 2. Format constraint check
         import re
-        has_speaker_labels = bool(re.search(r'^\s*(?:\[[^\]]+\]|\([^)]+\))\s*:?\s*|^\s*[A-Z][A-Za-z0-9 ]{0,20}:\s*', script, re.MULTILINE))
         has_markdown = bool(re.search(r'(\*\*|\*|#)', script))
-        
-        if has_speaker_labels:
-            reasons.append("The script contains speaker labels (like 'Host:', '[Host]', 'Speaker 1:').")
         if has_markdown:
             reasons.append("The script contains markdown styling (like headings, asterisks, or bold text).")
+
+        if podcast_format == "dialogue":
+            # For dialogue mode, check that every paragraph starts with Host: or Co-Host:
+            paragraphs = [p.strip() for p in script.split("\n\n") if p.strip()]
+            invalid_paragraphs = []
+            for p in paragraphs:
+                if not (p.startswith("Host:") or p.startswith("Co-Host:")):
+                    invalid_paragraphs.append(p)
+            
+            if invalid_paragraphs:
+                reasons.append(
+                    "In dialogue mode, every speaker turn/paragraph must start with 'Host:' or 'Co-Host:'. "
+                    f"Found paragraph with missing or invalid label: '{invalid_paragraphs[0][:60]}...'"
+                )
+            
+            # Check for stage directions (like bracketed [laughs] or (sighs))
+            has_stage_directions = bool(re.search(r'(\[[^\]]+\]|\([^)]+\))', script))
+            if has_stage_directions:
+                reasons.append("The script contains stage directions in brackets/parentheses (like [laughs] or (sighs)). The script must only contain spoken text.")
+        else:
+            # For monologue mode, check that there are no speaker labels
+            has_speaker_labels = bool(re.search(r'^\s*(?:\[[^\]]+\]|\([^)]+\))\s*:?\s*|^\s*[A-Z][A-Za-z0-9 ]{0,20}:\s*', script, re.MULTILINE))
+            if has_speaker_labels:
+                reasons.append("The script contains speaker labels (like 'Host:', '[Host]', 'Speaker 1:'). Narration mode must have no speaker labels.")
             
         if not reasons:
             print(f"[Loop Eng] Script passed all checks on attempt {attempt}!")
@@ -166,15 +201,26 @@ async def generate_podcast_script(
         feedback_msg = "\n".join(f"- {r}" for r in reasons)
         print(f"[Loop Eng] Attempt {attempt} failed constraints:\n{feedback_msg}\nRefining...")
         
-        refine_prompt = (
-            "You are a podcast script editor. The script you generated previously does not meet the requirements.\n\n"
-            f"Here is the script you generated:\n---\n{script}\n---\n\n"
-            "Please revise the script to fix the following issues:\n"
-            f"{feedback_msg}\n\n"
-            f"Style & Tone constraint: {selected_style_instruction}\n"
-            f"Target length: {target_words} words.\n"
-            "Output ONLY the final revised spoken narration text. No markdown, no headings, no speaker labels, no preamble, and no stage directions."
-        )
+        if podcast_format == "dialogue":
+            refine_prompt = (
+                "You are a podcast script editor. The co-hosted script you generated previously does not meet the requirements.\n\n"
+                f"Here is the script you generated:\n---\n{script}\n---\n\n"
+                "Please revise the script to fix the following issues:\n"
+                f"{feedback_msg}\n\n"
+                f"Style & Tone constraint: {selected_style_instruction}\n"
+                f"Target length: {target_words} words.\n"
+                "Output ONLY the final revised dialogue text. Format each paragraph strictly to start with 'Host:' or 'Co-Host:'. No stage directions, no markdown, and no preamble."
+            )
+        else:
+            refine_prompt = (
+                "You are a podcast script editor. The script you generated previously does not meet the requirements.\n\n"
+                f"Here is the script you generated:\n---\n{script}\n---\n\n"
+                "Please revise the script to fix the following issues:\n"
+                f"{feedback_msg}\n\n"
+                f"Style & Tone constraint: {selected_style_instruction}\n"
+                f"Target length: {target_words} words.\n"
+                "Output ONLY the final revised spoken narration text. No markdown, no headings, no speaker labels, no preamble, and no stage directions."
+            )
         
         response = await scripter_llm.ainvoke(refine_prompt)
         script = response.content

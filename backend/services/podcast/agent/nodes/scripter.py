@@ -13,7 +13,8 @@ async def scripter_node(state: EpisodeState) -> dict:
             state["summary"],
             target_minutes=state.get("target_minutes", 3.0),
             podcast_style=state.get("podcast_style", "conversational"),
-            custom_prompt=state.get("custom_prompt", None)
+            custom_prompt=state.get("custom_prompt", None),
+            podcast_format=state.get("podcast_format", "monologue")
         )
         script = sanitize_script(raw_script)
         validation_error = validate_script(script)

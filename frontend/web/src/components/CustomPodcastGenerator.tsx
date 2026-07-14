@@ -21,12 +21,18 @@ export function CustomPodcastGenerator() {
   const [targetMinutes, setTargetMinutes] = useState(3);
   const [reviewRequested, setReviewRequested] = useState(false);
   const [isAutoDetected, setIsAutoDetected] = useState(true);
+  const [podcastFormat, setPodcastFormat] = useState("monologue");
   const [voice, setVoice] = useState("af_heart");
+  const [voiceCohost, setVoiceCohost] = useState("af_sky");
   const [podcastStyle, setPodcastStyle] = useState("conversational");
   const [customPrompt, setCustomPrompt] = useState("");
   const [bgMusic, setBgMusic] = useState(false);
+  
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [audioPreview, setAudioPreview] = useState<HTMLAudioElement | null>(null);
+  
+  const [isPlayingPreviewCohost, setIsPlayingPreviewCohost] = useState(false);
+  const [audioPreviewCohost, setAudioPreviewCohost] = useState<HTMLAudioElement | null>(null);
 
   // Fetch available voices
   const { data: voices = [] } = useQuery({
@@ -55,11 +61,10 @@ export function CustomPodcastGenerator() {
   // Cleanup audio preview
   useEffect(() => {
     return () => {
-      if (audioPreview) {
-        audioPreview.pause();
-      }
+      if (audioPreview) audioPreview.pause();
+      if (audioPreviewCohost) audioPreviewCohost.pause();
     };
-  }, [audioPreview]);
+  }, [audioPreview, audioPreviewCohost]);
 
   useEffect(() => {
     if (audioPreview) {
@@ -69,6 +74,14 @@ export function CustomPodcastGenerator() {
     }
   }, [voice]);
 
+  useEffect(() => {
+    if (audioPreviewCohost) {
+      audioPreviewCohost.pause();
+      setIsPlayingPreviewCohost(false);
+      setAudioPreviewCohost(null);
+    }
+  }, [voiceCohost]);
+
   const togglePlayPreview = () => {
     if (isPlayingPreview) {
       if (audioPreview) {
@@ -77,6 +90,10 @@ export function CustomPodcastGenerator() {
       }
       setIsPlayingPreview(false);
     } else {
+      if (audioPreviewCohost) {
+        audioPreviewCohost.pause();
+        setIsPlayingPreviewCohost(false);
+      }
       const url = `http://localhost:8001/voices/${voice}/preview`;
       const audio = new Audio(url);
       audio.onended = () => {
@@ -91,6 +108,36 @@ export function CustomPodcastGenerator() {
       audio.play().catch((err) => {
         console.error(err);
         setIsPlayingPreview(false);
+      });
+    }
+  };
+
+  const togglePlayPreviewCohost = () => {
+    if (isPlayingPreviewCohost) {
+      if (audioPreviewCohost) {
+        audioPreviewCohost.pause();
+        audioPreviewCohost.currentTime = 0;
+      }
+      setIsPlayingPreviewCohost(false);
+    } else {
+      if (audioPreview) {
+        audioPreview.pause();
+        setIsPlayingPreview(false);
+      }
+      const url = `http://localhost:8001/voices/${voiceCohost}/preview`;
+      const audio = new Audio(url);
+      audio.onended = () => {
+        setIsPlayingPreviewCohost(false);
+      };
+      audio.onerror = () => {
+        setIsPlayingPreviewCohost(false);
+        alert("Failed to play voice preview. Make sure the podcast API is running.");
+      };
+      setAudioPreviewCohost(audio);
+      setIsPlayingPreviewCohost(true);
+      audio.play().catch((err) => {
+        console.error(err);
+        setIsPlayingPreviewCohost(false);
       });
     }
   };
@@ -129,6 +176,8 @@ export function CustomPodcastGenerator() {
         target_minutes: targetMinutes,
         review_requested: reviewRequested,
         voice,
+        voice_cohost: voiceCohost,
+        podcast_format: podcastFormat,
         podcast_style: podcastStyle,
         custom_prompt: customPrompt.trim() || undefined,
         bg_music: bgMusic,
@@ -223,9 +272,38 @@ export function CustomPodcastGenerator() {
               />
             </label>
 
+            {/* Podcast Format */}
+            <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+              <span>Podcast Format</span>
+              <div className="flex gap-1 p-0.5 bg-sidebar rounded-md border border-border/60">
+                <button
+                  type="button"
+                  onClick={() => setPodcastFormat("monologue")}
+                  className={`flex-1 py-1 rounded text-center text-xs transition-all ${
+                    podcastFormat === "monologue"
+                      ? "bg-background text-foreground font-semibold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Monologue
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPodcastFormat("dialogue")}
+                  className={`flex-1 py-1 rounded text-center text-xs transition-all ${
+                    podcastFormat === "dialogue"
+                      ? "bg-background text-foreground font-semibold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Co-Hosted
+                </button>
+              </div>
+            </div>
+
             {/* Duration and Voice */}
-            <div className="grid grid-cols-5 gap-2 items-end">
-              <label className="flex flex-col gap-1 text-xs text-muted-foreground col-span-2">
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
                 <span>Duration</span>
                 <div className="flex items-center gap-1 h-8">
                   <input
@@ -237,7 +315,7 @@ export function CustomPodcastGenerator() {
                       setTargetMinutes(Number(e.target.value) || 1);
                       setIsAutoDetected(false);
                     }}
-                    className="w-10 rounded-md border border-border/60 bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    className="w-12 rounded-md border border-border/60 bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                   />
                   <span className="text-xs">min</span>
                   {!isAutoDetected && (
@@ -253,34 +331,96 @@ export function CustomPodcastGenerator() {
                 </div>
               </label>
 
-              <label className="flex flex-col gap-1 text-xs text-muted-foreground col-span-3">
-                <span>Voice</span>
-                <div className="flex gap-1 items-center h-8">
-                  <select
-                    value={voice}
-                    onChange={(e) => setVoice(e.target.value)}
-                    className="flex-1 min-w-0 rounded-md border border-border/60 bg-background px-1.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  >
-                    {voices.map((v) => (
-                      <option key={v} value={v}>
-                        {v}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={togglePlayPreview}
-                    title={isPlayingPreview ? "Stop preview" : "Play preview"}
-                    className={`p-1.5 rounded-md border transition-colors shrink-0 ${
-                      isPlayingPreview
-                        ? "border-primary bg-primary/5 text-primary hover:bg-primary/10"
-                        : "border-border/60 bg-background hover:bg-background/80 text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {isPlayingPreview ? <VolumeX size={13} /> : <Volume2 size={13} />}
-                  </button>
+              {podcastFormat === "monologue" ? (
+                <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                  <span>Voice</span>
+                  <div className="flex gap-1 items-center h-8">
+                    <select
+                      value={voice}
+                      onChange={(e) => setVoice(e.target.value)}
+                      className="flex-1 min-w-0 rounded-md border border-border/60 bg-background px-1.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      {voices.map((v: string) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={togglePlayPreview}
+                      title={isPlayingPreview ? "Stop preview" : "Play preview"}
+                      className={`p-1.5 rounded-md border transition-colors shrink-0 ${
+                        isPlayingPreview
+                          ? "border-primary bg-primary/5 text-primary hover:bg-primary/10"
+                          : "border-border/60 bg-background hover:bg-background/80 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {isPlayingPreview ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                    </button>
+                  </div>
+                </label>
+              ) : (
+                <div className="flex flex-col gap-3 border-l border-primary/20 pl-2">
+                  <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                    <span>Host Voice (Aarav)</span>
+                    <div className="flex gap-1 items-center h-8">
+                      <select
+                        value={voice}
+                        onChange={(e) => setVoice(e.target.value)}
+                        className="flex-1 min-w-0 rounded-md border border-border/60 bg-background px-1.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        {voices.map((v: string) => (
+                          <option key={v} value={v}>
+                            {v}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={togglePlayPreview}
+                        title={isPlayingPreview ? "Stop preview" : "Play preview"}
+                        className={`p-1.5 rounded-md border transition-colors shrink-0 ${
+                          isPlayingPreview
+                            ? "border-primary bg-primary/5 text-primary hover:bg-primary/10"
+                            : "border-border/60 bg-background hover:bg-background/80 text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {isPlayingPreview ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                      </button>
+                    </div>
+                  </label>
+
+                  <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                    <span>Co-Host Voice (Ananya)</span>
+                    <div className="flex gap-1 items-center h-8">
+                      <select
+                        value={voiceCohost}
+                        onChange={(e) => setVoiceCohost(e.target.value)}
+                        className="flex-1 min-w-0 rounded-md border border-border/60 bg-background px-1.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        {voices.map((v: string) => (
+                          <option key={v} value={v}>
+                            {v}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={togglePlayPreviewCohost}
+                        title={isPlayingPreviewCohost ? "Stop preview" : "Play preview"}
+                        className={`p-1.5 rounded-md border transition-colors shrink-0 ${
+                          isPlayingPreviewCohost
+                            ? "border-primary bg-primary/5 text-primary hover:bg-primary/10"
+                            : "border-border/60 bg-background hover:bg-background/80 text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {isPlayingPreviewCohost ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                      </button>
+                    </div>
+                  </label>
                 </div>
-              </label>
+              )}
             </div>
 
             <label className="flex flex-col gap-1 text-xs text-muted-foreground">

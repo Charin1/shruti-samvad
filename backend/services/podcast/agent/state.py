@@ -23,6 +23,8 @@ class EpisodeState(TypedDict):
     target_minutes: float
     review_requested: bool
     voice: str  # TTS voice selection (e.g., "af_heart", "af_sky")
+    voice_cohost: str  # Co-host voice selection
+    podcast_format: str  # monologue or dialogue
     podcast_style: str  # style/tone for podcast script
     custom_prompt: Optional[str]  # user custom prompt/instructions
     bg_music: bool  # play background music

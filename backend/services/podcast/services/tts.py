@@ -75,34 +75,62 @@ class TTSService:
         text: str,
         output_path: str,
         voice: str = "af_sky",
+        voice_cohost: Optional[str] = None,
+        podcast_format: str = "monologue",
         speed: float = 1.0,
         on_progress=None,
     ) -> bool:
         """
-        Synthesize text to a WAV file.
+        Synthesize text to a WAV file. Supports monologue (single voice) and dialogue
+        (multiple voices split by paragraph prefixes 'Host:' and 'Co-Host:').
 
         Text is split into sentence-bounded chunks and each chunk is
-        synthesized in a worker thread (Kokoro's `.create()` is a blocking,
-        CPU-bound call — running it inline would freeze the async event loop
-        for the entire script's synthesis time). Resulting samples are
+        synthesized in a worker thread. Resulting samples are
         concatenated into a single output file.
-
-        `on_progress(done, total)` — awaited after each chunk — lets callers
-        stream real progress instead of one opaque "synthesizing" state.
         """
+        from typing import Optional
         self.ensure_ready()
 
-        chunks = _split_into_speech_chunks(text)
+        # Build list of (chunk_text, voice_to_use)
+        dialogue_chunks: list[tuple[str, str]] = []
+
+        if podcast_format == "dialogue" and voice_cohost:
+            paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+            for p in paragraphs:
+                # Check for speaker prefix
+                import re
+                m = re.match(r'^(Host|Co-Host|Aarav|Ananya|Speaker\s*[12]):\s*(.*)', p, re.IGNORECASE)
+                if m:
+                    speaker = m.group(1).lower()
+                    body = m.group(2).strip()
+                    # Assign voice based on speaker label
+                    current_voice = voice_cohost if "co-host" in speaker or "ananya" in speaker or "2" in speaker else voice
+                else:
+                    body = p
+                    current_voice = voice
+                
+                # Split the turn's body into sentence-bounded chunks
+                chunks = _split_into_speech_chunks(body)
+                for c in chunks:
+                    dialogue_chunks.append((c, current_voice))
+        else:
+            chunks = _split_into_speech_chunks(text)
+            for c in chunks:
+                dialogue_chunks.append((c, voice))
+
+        if not dialogue_chunks:
+            dialogue_chunks = [("Hello", voice)]
+
         all_samples = []
         sample_rate = None
 
-        for i, chunk in enumerate(chunks):
+        for i, (chunk, chunk_voice) in enumerate(dialogue_chunks):
             samples, sample_rate = await asyncio.to_thread(
-                self._synthesize_chunk_sync, chunk, voice, speed
+                self._synthesize_chunk_sync, chunk, chunk_voice, speed
             )
             all_samples.append(samples)
             if on_progress:
-                await on_progress(i + 1, len(chunks))
+                await on_progress(i + 1, len(dialogue_chunks))
 
         merged = np.concatenate(all_samples) if len(all_samples) > 1 else all_samples[0]
         sf.write(output_path, merged, sample_rate)

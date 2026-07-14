@@ -193,6 +193,8 @@ async def process_episode_job(ctx, episode_id: UUID):
                 "target_minutes": episode.target_minutes,
                 "review_requested": episode.review_requested,
                 "voice": episode.voice,
+                "voice_cohost": episode.voice_cohost,
+                "podcast_format": episode.podcast_format,
                 "podcast_style": episode.podcast_style,
                 "custom_prompt": episode.custom_prompt,
                 "bg_music": episode.bg_music,

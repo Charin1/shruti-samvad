@@ -16,8 +16,15 @@ async def tts_node(state: EpisodeState) -> dict:
 
     try:
         voice = state.get("voice", "af_heart")
+        voice_cohost = state.get("voice_cohost", "af_sky")
+        podcast_format = state.get("podcast_format", "monologue")
         success = await tts_service.synthesize(
-            state["podcast_script"], temp_wav_path, voice=voice, on_progress=on_progress
+            state["podcast_script"],
+            temp_wav_path,
+            voice=voice,
+            voice_cohost=voice_cohost,
+            podcast_format=podcast_format,
+            on_progress=on_progress
         )
         if success:
             return {"audio_path": temp_wav_path, "status": "saving"}
